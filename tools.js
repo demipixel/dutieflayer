@@ -160,7 +160,7 @@ function craftPlanks(m) {
 	var benchRecipe = bot.recipesAll(58, null, null, true)[0];
 	console.log('benchRecipe',benchRecipe);
 	
-	var craftTask = new CallTask(bot.craft, [plankRecipe, 4, null]);
+	var craftTask = new CallTask(bot.craft, [plankRecipe, 4, null], { complete: function() { console.log('complete planks') }});
 	var benchTask = new CallTask(bot.craft, [benchRecipe, 1, null]);
 	benchTask.dependOn(craftTask);
 	m.addAll(craftTask);

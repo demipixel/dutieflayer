@@ -28,7 +28,7 @@
     "mineflayer-blockfinder": "git://github.com/rom1504/mineflayer-blockfinder.git#fix_recursion",
     "mineflayer-navigate": "^0.0.9",
     "dutie": "^1.0.0",
-    "mineflayer": "^1.0.0",
+    "mineflayer": "git://github.com/andrewrk/mineflayer.git",
     "vec3": "^0.1.3",
     "mineflayer-scaffold": "^0.0.5"
   },
