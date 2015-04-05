@@ -1,0 +1,11 @@
+var Vec3 = require('vec3').Vec3;
+
+module.exports = inject;
+
+function inject(bot) {
+  bot.spawnPoint = new Vec3(0, 0, 0);
+  bot.client.on(0x06, function(packet) {
+    bot.spawnPoint.set(packet.x, packet.y, packet.z);
+    bot.emit('game');
+  });
+}

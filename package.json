@@ -1,0 +1,36 @@
+{
+  "name": "dutieflayer",
+  "version": "0.0.0",
+  "description": "Dutie and Mineflayer combined into a minecraft bot(s)",
+  "main": "tools.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/demipixel/dutieflayer.git"
+  },
+  "keywords": [
+    "dutie",
+    "mineflayer",
+    "flayer",
+    "minecraft",
+    "bot",
+    "automated"
+  ],
+  "author": "Lucas Simon <luke5227@gmail.com>",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/demipixel/dutieflayer/issues"
+  },
+  "homepage": "https://github.com/demipixel/dutieflayer",
+  "dependencies": {
+    "mineflayer-blockfinder": "git://github.com/rom1504/mineflayer-blockfinder.git#fix_recursion",
+    "mineflayer-navigate": "^0.0.9",
+    "dutie": "^1.0.0",
+    "mineflayer": "^1.0.0",
+    "vec3": "^0.1.3",
+    "mineflayer-scaffold": "^0.0.5"
+  },
+  "devDependencies": {}
+}
