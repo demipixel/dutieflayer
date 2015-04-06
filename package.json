@@ -30,7 +30,8 @@
     "dutie": "git://github.com/demipixel/dutie.git#flayer",
     "mineflayer": "git://github.com/andrewrk/mineflayer.git#master",
     "vec3": "^0.1.3",
-    "mineflayer-scaffold": "^0.0.5"
+    "mineflayer-scaffold": "^0.0.5",
+    "spiralloop": "^1.0.1"
   },
   "devDependencies": {}
 }
