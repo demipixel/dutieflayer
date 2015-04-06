@@ -27,7 +27,7 @@
   "dependencies": {
     "mineflayer-blockfinder": "git://github.com/rom1504/mineflayer-blockfinder.git#fix_recursion",
     "mineflayer-navigate": "^0.0.9",
-    "dutie": "git://github.com/demipixel/dutie.git#flayer",
+    "dutie": "^1.2.1",
     "mineflayer": "git://github.com/andrewrk/mineflayer.git#master",
     "vec3": "^0.1.3",
     "mineflayer-scaffold": "^0.0.5",

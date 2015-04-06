@@ -46,7 +46,10 @@ function getWood(amt, bt) {
 	scaffoldPlugin(bot);
 	
 	var wood = bot.inventory.findInventoryItem(17, null);
-	if (wood && wood.count >= amt) return new RunTask(function() {});
+	if (wood && wood.count >= amt) {
+		console.log('enough wood', wood, amt);
+		return new RunTask(function() {});
+	}
 	
 	var lumberjack = new RunTask(treeFinder, [amt], { priority: 5, actPriority: 8, check: lumberCheck});
 	return lumberjack;
@@ -86,6 +89,7 @@ function cutTree(lumberDutie, amt) {
 			return block.name == 'air';
 		}, complete: function() {
 			var wood = bot.inventory.findInventoryItem(17, null);
+			if (lumberDutie.tasks.length == 0) console.log('WOOD END');
 			if (lumberDutie.tasks.length == 0 && (!wood || wood.count < amt)) {
 				treeFinder(lumberDutie, amt);
 			}

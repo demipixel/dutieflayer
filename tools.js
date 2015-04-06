@@ -88,9 +88,7 @@ function chatMessage(username, message) {
 
 function getTools(m) {
 	var lumb = lumberjack(4, bot);
-	lumb.complete = function() {
-		console.log('LUMB COMPLETE');
-	}
+	console.log('lumb');
 	
 	/*var wood = bot.inventory.findInventoryItem(17, null);
 	bot.lookAt(bot.entity.position.offset(-2, 0, 0));
@@ -101,8 +99,6 @@ function getTools(m) {
 	
 	var location = vec3(0, 0, 0);
 	var getBenchLocation = new RunTask(function() { 
-		Error.stackTraceLimit = 25;
-		throw new Error('a');
 		var found = false;
 		spiral([7, 4, 7], function(x, y, z) {
 			x += Math.floor(bot.entity.position.x) - 3;
@@ -145,14 +141,17 @@ function getTools(m) {
 		if (bot.blockAt(location).name == 'workbench') return true;
 	}});
 	
-	lumb.dependBy(makePlanks).dependBy(getBenchLocation).dependBy(centerTask).dependBy(waitTask).dependBy(placeBench);
+	var craftPick = new RunTask(craftPickaxe, [location]);
+	
+	lumb.dependBy(makePlanks).dependBy(getBenchLocation).dependBy(centerTask).dependBy(waitTask).dependBy(placeBench)
+		.dependBy(craftPick);
 	m.addAll(lumb);
 }
 
 function craftPlanks(m) {
 	console.log('craftPlanks');
 	var wood = bot.inventory.findInventoryItem(17, null);
-	var plankRecipeList = bot.recipesFor(5, null, null, true);
+	var plankRecipeList = bot.recipesFor(5, null, null, null);
 	var plankRecipe;
 	for (var i = 0; i < plankRecipeList.length; i++) {
 		var listmeta = plankRecipeList[i].ingredients[0].metadata
@@ -162,15 +161,13 @@ function craftPlanks(m) {
 		plankRecipe = plankRecipeList[0];
 	}
 	
-	var benchRecipe = bot.recipesAll(58, null, null, true)[0];
+	var benchRecipe = bot.recipesAll(58, null, null, null)[0];
 	console.log('benchRecipe',benchRecipe);
 	
-	var craftTask = new CallTask(bot.craft, [plankRecipe, 4, null], { complete: function() { console.log('complete planks') }});
-	//var benchTask = new CallTask(bot.craft, [benchRecipe, 1, null]);
-	var benchTask = new CallTask(function(a) { throw a }, [new Error('test')]);
+	var craftTask = new CallTask(bot.craft, [plankRecipe, 4, null]);
+	var benchTask = new CallTask(bot.craft, [benchRecipe, 1, null]);
 	benchTask.dependOn(craftTask);
 	m.addAll(craftTask);
-	console.log('m',m);
 }
 
 function placeCraftBench(m, loc) {
@@ -179,9 +176,9 @@ function placeCraftBench(m, loc) {
 	var switchToBench = new CallTask(bot.equip, [bench, 'hand']);
 	var wait = new CallTask(setTimeout, [null, 200], { location: 0});
 	
-	var refBlock = bot.blockAt(loc.subtract(vec3(0, 1, 0)));
+	var refBlock = bot.blockAt(loc.clone().minus(vec3(0, 1, 0)));
 	console.log('refBlock',refBlock);
-	var placeBench = new CallTask(bot.placeBlock, [refBlock, vec3(0, 1, 0)]);
+	var placeBench = new RunTask(bot.placeBlock, [refBlock, vec3(0, 1, 0)], { manager: false});
 	switchToBench.dependBy(wait);
 	wait.dependBy(placeBench);
 	
@@ -190,6 +187,19 @@ function placeCraftBench(m, loc) {
 
 function center(p) {
 	return p.floored().offset(0.5,0,0.5);
+}
+
+function craftPickaxe(m, location) {
+	var stickRecipe = bot.recipesAll(280, null, false)[0];
+	var craftSticks = new CallTask(bot.craft, [stickRecipe, 3, null]);
+	
+	var woodPickRecipe = bot.recipesAll(270, null, true)[0];
+	var craftWoodPick = new CallTask(bot.craft, [woodPickRecipe, 4, bot.blockAt(location)]);
+	console.log(bot.blockAt(location));
+	console.log('this',woodPickRecipe.inShape);
+	
+	craftWoodPick.dependOn(craftSticks);
+	m.addAll(craftWoodPick);
 }
 
 
