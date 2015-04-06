@@ -88,6 +88,9 @@ function chatMessage(username, message) {
 
 function getTools(m) {
 	var lumb = lumberjack(4, bot);
+	lumb.complete = function() {
+		console.log('LUMB COMPLETE');
+	}
 	
 	/*var wood = bot.inventory.findInventoryItem(17, null);
 	bot.lookAt(bot.entity.position.offset(-2, 0, 0));
@@ -98,6 +101,8 @@ function getTools(m) {
 	
 	var location = vec3(0, 0, 0);
 	var getBenchLocation = new RunTask(function() { 
+		Error.stackTraceLimit = 25;
+		throw new Error('a');
 		var found = false;
 		spiral([7, 4, 7], function(x, y, z) {
 			x += Math.floor(bot.entity.position.x) - 3;
@@ -161,9 +166,11 @@ function craftPlanks(m) {
 	console.log('benchRecipe',benchRecipe);
 	
 	var craftTask = new CallTask(bot.craft, [plankRecipe, 4, null], { complete: function() { console.log('complete planks') }});
-	var benchTask = new CallTask(bot.craft, [benchRecipe, 1, null]);
+	//var benchTask = new CallTask(bot.craft, [benchRecipe, 1, null]);
+	var benchTask = new CallTask(function(a) { throw a }, [new Error('test')]);
 	benchTask.dependOn(craftTask);
 	m.addAll(craftTask);
+	console.log('m',m);
 }
 
 function placeCraftBench(m, loc) {

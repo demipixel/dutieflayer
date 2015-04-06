@@ -1,4 +1,4 @@
-var Dutie = require('./');
+var Dutie = require('../');
 var Task = Dutie.Task;
 
 var Manager = new Dutie();
