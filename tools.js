@@ -53,9 +53,7 @@ bot.on('end', function() {
 });*/
 
 function chatMessage(username, message) {
-	if (username == 'OnlySpray') return;
-	console.log(username);
-	console.log(message);
+	console.log(username + ': ' + message);
 	if (message == 'tools') {
 		var tools = new RunTask(getTools, [], { priority: 5, actPriority: 8 });
 		main.add(tools);
@@ -65,9 +63,10 @@ function chatMessage(username, message) {
 		var give = new RunTask(tossTools, [username], { priority: 3, actPriority: 4});
 		main.add(give);
 	} else if (message == 'toss all') {
+		console.log('tossing all');
 		var toss = new RunTask(tossAll, [username], { priority: 1, actPriority: 2});
 		main.add(toss);
-	} else if (message == 'come' || username == 'DemiPixel') {
+	} else if (message == 'come') {
 		var entity = bot.players[username].entity;
 		console.log(entity.position);
 		var path = bot.navigate.findPathSync(entity.position);
