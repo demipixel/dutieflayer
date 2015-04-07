@@ -14,7 +14,7 @@ var Task = Dutie.Task,
 
 var main = new Dutie();
 
-if(process.argv.length<3 || process.argv.length>5)
+if(process.argv.length<3 || process.argv.length>6)
 {
     console.log("Usage : node tools.js <host> <port> [<name>] [<password>]");
     process.exit(1);
@@ -33,6 +33,14 @@ scaffoldPlugin(bot);
 
 bot.on('chat', chatMessage);
 
+bot.on('kicked', function(reason) {
+	console.log('KICKED!',reason);
+});
+
+bot.on('end', function() {
+	console.log('ENDED!');
+});
+
 /*bot.on('spawn', function() {
 	setTimeout(function() {
 		var tools = new RunTask(getTools, [], { priority: 5, actPriority: 8 });
@@ -45,21 +53,33 @@ bot.on('chat', chatMessage);
 });*/
 
 function chatMessage(username, message) {
+	if (username == 'OnlySpray') return;
 	console.log(username);
 	console.log(message);
 	if (message == 'tools') {
 		var tools = new RunTask(getTools, [], { priority: 5, actPriority: 8 });
 		main.add(tools);
-	}
-	if (message == 'list') {
+	} else if (message == 'list') {
 		listInventory();
-	}
-	if (message == 'give tools') {
+	} else if (message == 'give tools') {
 		var give = new RunTask(tossTools, [username], { priority: 3, actPriority: 4});
 		main.add(give);
+	} else if (message == 'toss all') {
+		var toss = new RunTask(tossAll, [username], { priority: 1, actPriority: 2});
+		main.add(toss);
+	} else if (message == 'come' || username == 'DemiPixel') {
+		var entity = bot.players[username].entity;
+		console.log(entity.position);
+		var path = bot.navigate.findPathSync(entity.position);
+		var come = new CallTask(bot.navigate.walk, [path.path], { priority: 2, actPriority: 3, complete: function() { console.log('done') }});
+		main.add(come);
+	}
+	if (message == 'follow') {
+		var entity = bot.players[username].entity;
+		//var follow = new CallTask(bot.navigate.to, [entity.position], { priority: 2, actPriority: 3});
 	}
 	//////////// COPIED FROM INVENTORY.JS
-	if (/^toss (\d+) /.test(message)) {
+	/*if (/^toss (\d+) /.test(message)) {
     words = message.split(" ");
     amount = parseInt(words[1], 10);
     name = words[2];
@@ -98,7 +118,7 @@ function chatMessage(username, message) {
     } else {
       bot.chat("I have no " + name);
     }
-  }
+  }*/
   ////////////////////////
   ////////////////////////
 }
@@ -180,8 +200,8 @@ function getTools(m) {
 			z += Math.floor(bot.entity.position.z) - 20;
 			
 			var block = bot.blockAt(vec3(x, y, z));
-			if (block.name == 'stone') stone.push(block);
-			if (stone.length > 20) return true; // Have plenty just in case some get destroyed.
+			if (block.name == 'stone' && block.metadata == 0) stone.push(block);
+			if (stone.length > 35) return true; // Have plenty just in case some get destroyed.
 		});
 	});
 	var switchPick = new RunTask(switchToPick);
@@ -291,6 +311,7 @@ function getStone(m, stone) {
 			}
 			
 			if (!found) {
+				if (!stone[0].position) return;
 				digStone.reset([stone[0].position]);
 				m.add(digStone);
 			}
@@ -334,12 +355,27 @@ function craftStoneTools(m, loc) {
 }
 
 
-
+function tossAll(m, username) {
+	var entity;
+	if (bot.players[username]) entity = bot.players[username].entity;
+    if (entity) bot.lookAt(entity.position.offset(0, entity.height, 0));
+    
+    console.log(bot.inventory.slots);
+     	
+	for (var i = 0; i < bot.inventory.slots.length; i++) {
+		console.log(bot.inventory.slots[i]);
+		var item = bot.inventory.slots[i];
+		if (item) {
+			var toss = new CallTask(bot.tossStack, [item]);
+			m.add(toss);
+		}
+	}
+}
 
 function tossTools(m, player) {
 	var entity = bot.players[player].entity;
 	bot.lookAt(entity.position.offset(0, entity.height, 0), true);
-	var wait = new CallTask(setTimeout, [null, 500], {location: 0});
+	var wait = new CallTask(setTimeout, [null, 500], {location: 0, priority: 1});
 	m.add(wait);
 	
 	for (var i = 272; i <= 275; i++) {
