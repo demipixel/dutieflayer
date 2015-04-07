@@ -12,11 +12,11 @@ var Task = Dutie.Task,
 
 var main = new Dutie();
 
-if(process.argv.length<3 || process.argv.length>5)
+/*if(process.argv.length<3 || process.argv.length>5)
 {
     console.log("Usage : node dudieflayer.js <host> <port> [<name>] [<password>]");
     process.exit(1);
-}
+}*/
 
 //bot.on('spawn', function() { console.log(bot.inventory) });
 
@@ -60,6 +60,9 @@ function getWood(amt, bt) {
 
 
 function treeFinder(lumberDutie, amt) {
+	var wood = bot.inventory.findInventoryItem(17, null);
+	if (wood && wood.count >= amt) return;
+	
 	var findTreeTask = new CallTask(bot.findBlock, [ { // Find tree task. Sets activeTree to the tree it finds
 		matching: 17,
 		maxDistance: 64,
@@ -89,9 +92,7 @@ function cutTree(lumberDutie, amt) {
 		var mineBlock = new CallTask(bot.dig, [block], { cancel: bot.stopDigging, start: function() {
 			return block.name == 'air';
 		}, complete: function() {
-			var wood = bot.inventory.findInventoryItem(17, null);
-			if (lumberDutie.tasks.length == 0) console.log('WOOD END');
-			if (lumberDutie.tasks.length == 0 && (!wood || wood.count < amt)) {
+			if (lumberDutie.tasks.length == 0) {
 				lumberDutie.add(new CallTask(setTimeout, [null, 1000], {location: 0, complete: treeFinder, completeParams: [lumberDutie, amt]}));
 			}
 		}});

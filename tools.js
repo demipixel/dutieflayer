@@ -33,13 +33,30 @@ scaffoldPlugin(bot);
 
 bot.on('chat', chatMessage);
 
+/*bot.on('spawn', function() {
+	setTimeout(function() {
+		var tools = new RunTask(getTools, [], { priority: 5, actPriority: 8 });
+		main.add(tools);
+		
+		var player = 'Your username';
+		var give = new RunTask(tossTools, [player], { priority: 3, actPriority: 4});
+		main.add(give);
+	},10*1000);
+});*/
+
 function chatMessage(username, message) {
+	console.log(username);
+	console.log(message);
 	if (message == 'tools') {
 		var tools = new RunTask(getTools, [], { priority: 5, actPriority: 8 });
 		main.add(tools);
 	}
 	if (message == 'list') {
 		listInventory();
+	}
+	if (message == 'give tools') {
+		var give = new RunTask(tossTools, [username], { priority: 3, actPriority: 4});
+		main.add(give);
 	}
 	//////////// COPIED FROM INVENTORY.JS
 	if (/^toss (\d+) /.test(message)) {
@@ -252,7 +269,7 @@ function getStone(m, stone) {
 			m.add(new RunTask(switchToPick));
 		}
 		var stoneInv = bot.inventory.findInventoryItem(4, null) || { count: 0};
-		if (stoneInv.count < 9 + 4 - 1) { // 9 for tools, 4 to scaffold just in case, -1 because it will end before it collects the last stone
+		if (stoneInv.count < 9) { // 9 is the exact amount needed for tools. Add more if needed.
 			stone.splice(0, 1);
 			
 			var sides = [vec3(1, 0, 0), vec3(-1, 0, 0), vec3(0, 0, 1), vec3(0, 0, -1)];
@@ -319,7 +336,20 @@ function craftStoneTools(m, loc) {
 
 
 
-
+function tossTools(m, player) {
+	var entity = bot.players[player].entity;
+	bot.lookAt(entity.position.offset(0, entity.height, 0), true);
+	var wait = new CallTask(setTimeout, [null, 500], {location: 0});
+	m.add(wait);
+	
+	for (var i = 272; i <= 275; i++) {
+		var item = bot.inventory.findInventoryItem(i);
+		if (item) {
+			var toss = new CallTask(bot.tossStack, [item]);
+			m.add(toss);
+		}
+	}
+}
 
 function listInventory() {
   var text = bot.inventory.items().map(itemStr).join(", ");
