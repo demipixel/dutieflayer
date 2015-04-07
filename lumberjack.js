@@ -5,9 +5,10 @@ var blockFinderPlugin = require('mineflayer-blockfinder')(mineflayer);
 
 var vec3 = require('vec3');
 var Dutie = require('dutie');
-var Task = Dutie.Task;
-var CallTask = Dutie.CallTask;
-var RunTask = Dutie.RunTask;
+var Task = Dutie.Task,
+	CallTask = Dutie.CallTask,
+	RunTask = Dutie.RunTask,
+	ExecTask = Dutie.ExecTask;
 
 var main = new Dutie();
 
@@ -84,14 +85,14 @@ function cutTree(lumberDutie, amt) {
 	
 	for (var i = 0; i < activeTree.length; i++) {
 		var block = activeTree[i];
-		var lookAt = new RunTask(bot.lookAt, [block.position, true], { manager: false});
+		var lookAt = new ExecTask(bot.lookAt, [block.position, true]);
 		var mineBlock = new CallTask(bot.dig, [block], { cancel: bot.stopDigging, start: function() {
 			return block.name == 'air';
 		}, complete: function() {
 			var wood = bot.inventory.findInventoryItem(17, null);
 			if (lumberDutie.tasks.length == 0) console.log('WOOD END');
 			if (lumberDutie.tasks.length == 0 && (!wood || wood.count < amt)) {
-				treeFinder(lumberDutie, amt);
+				lumberDutie.add(new CallTask(setTimeout, [null, 1000], {location: 0, complete: treeFinder, completeParams: [lumberDutie, amt]}));
 			}
 		}});
 		lumberDutie.addAll(mineBlock.dependOn(lookAt));

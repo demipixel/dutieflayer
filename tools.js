@@ -7,9 +7,10 @@ var blockFinderPlugin = require('mineflayer-blockfinder')(mineflayer);
 var vec3 = require('vec3');
 var Dutie = require('dutie');
 var spiral = require('spiralloop');
-var Task = Dutie.Task;
-var CallTask = Dutie.CallTask;
-var RunTask = Dutie.RunTask;
+var Task = Dutie.Task,
+	CallTask = Dutie.CallTask,
+	RunTask = Dutie.RunTask,
+	ExecTask = Dutie.ExecTask;
 
 var main = new Dutie();
 
@@ -94,12 +95,9 @@ function getTools(m) {
 	bot.lookAt(bot.entity.position.offset(-2, 0, 0));
     if (wood) bot.tossStack(wood);*/
 	
-	
-	var makePlanks = new RunTask(craftPlanks);
-	
 	var location = vec3(0, 0, 0);
-	var getBenchLocation = new RunTask(function() { 
-		var found = false;
+	var foundBench = { val: false};
+	var benchExists = new ExecTask(function() {
 		spiral([7, 4, 7], function(x, y, z) {
 			x += Math.floor(bot.entity.position.x) - 3;
 			y += Math.floor(bot.entity.position.y) - 1;
@@ -109,11 +107,17 @@ function getTools(m) {
 				location.x = x;
 				location.y = y;
 				location.z = z;
+				foundBench.val = true;
+				console.log('FOUND BENCH');
 				return true;
 			}
 		});
-		if (found) return;
-		
+	});
+	
+	var makePlanks = new RunTask(craftPlanks, [foundBench]);
+	
+	var getBenchLocation = new ExecTask(function() { 
+		if (foundBench.val) return;
 		spiral([7, 6, 7], function(x, y, z) {
 			if (x == 3 && z == 3) return;
 			x += Math.floor(bot.entity.position.x) - 3;
@@ -130,26 +134,52 @@ function getTools(m) {
 				return true;
 			}
 		}
-	)});
+	)}, [], { start: function() { if (foundBench.val) return true; }});
 	
-	var centerTask = new RunTask(function() {
+	var centerTask = new ExecTask(function() {
+		if (location.y == -1) return;
 		bot.entity.position = center(bot.entity.position);
 	});
-	var waitTask = new CallTask(setTimeout, [null, 200], { location: 0});
+	var waitTask = new CallTask(setTimeout, [null, 200], { location: 0, start: function() { if (foundBench.val) return true; }});
 	
 	var placeBench = new RunTask(placeCraftBench, [location], { start: function() {
-		if (bot.blockAt(location).name == 'workbench') return true;
+		if (foundBench.val) return true;
 	}});
 	
 	var craftPick = new RunTask(craftPickaxe, [location]);
 	
-	lumb.dependBy(makePlanks).dependBy(getBenchLocation).dependBy(centerTask).dependBy(waitTask).dependBy(placeBench)
-		.dependBy(craftPick);
+	var stone = Array();
+	var safeStandLocation = vec3(0, 0, 0);
+	
+	var findStone = new ExecTask(function() {
+		console.log('searching for stone');
+		safeStandLocation.x = bot.entity.position.x;
+		safeStandLocation.y = bot.entity.position.y;
+		safeStandLocation.z = bot.entity.position.z;
+		
+		spiral([40, 16, 40], function(x, y, z) {
+			x += Math.floor(bot.entity.position.x) - 20;
+			y += Math.floor(bot.entity.position.y) - 8;
+			z += Math.floor(bot.entity.position.z) - 20;
+			
+			var block = bot.blockAt(vec3(x, y, z));
+			if (block.name == 'stone') stone.push(block);
+			if (stone.length > 20) return true; // Have plenty just in case some get destroyed.
+		});
+	});
+	var switchPick = new RunTask(switchToPick);
+	var mineStone = new RunTask(getStone, [stone]);
+	var goBack = new RunTask(goBackToBench, [safeStandLocation]);
+	var craftTools = new RunTask(craftStoneTools, [location]);
+	
+	lumb.dependBy(benchExists).dependBy(makePlanks).dependBy(getBenchLocation).dependBy(centerTask).dependBy(waitTask).dependBy(placeBench)
+		.dependBy(craftPick).dependBy(findStone).dependBy(switchPick).dependBy(mineStone).dependBy(goBack).dependBy(craftTools);
 	m.addAll(lumb);
 }
 
-function craftPlanks(m) {
-	console.log('craftPlanks');
+function craftPlanks(m, b) {
+	console.log('craft planks');
+	var bench = b.val;
 	var wood = bot.inventory.findInventoryItem(17, null);
 	var plankRecipeList = bot.recipesFor(5, null, null, null);
 	var plankRecipe;
@@ -162,17 +192,21 @@ function craftPlanks(m) {
 	}
 	
 	var benchRecipe = bot.recipesAll(58, null, null, null)[0];
-	console.log('benchRecipe',benchRecipe);
+	if (!bench) console.log('craft crafting bench');
 	
-	var craftTask = new CallTask(bot.craft, [plankRecipe, 4, null]);
+	var craftTask = new CallTask(bot.craft, [plankRecipe, (bench ? 3 : 4), null]); // 3:4 => Don't need to make extra if we already have a crafting bench
 	var benchTask = new CallTask(bot.craft, [benchRecipe, 1, null]);
-	benchTask.dependOn(craftTask);
-	m.addAll(craftTask);
+	if (!bench) { // loc contains position of crafting table if one exists
+		benchTask.dependOn(craftTask);
+		m.addAll(craftTask);
+	} else {
+		m.add(craftTask); // Don't make crafting bench if we already have one nearby
+	}
 }
 
 function placeCraftBench(m, loc) {
-	console.log('placeBench',loc);
-	bench = bot.inventory.findInventoryItem(58, null);
+	console.log('place crafting bench');
+	var bench = bot.inventory.findInventoryItem(58, null);
 	var switchToBench = new CallTask(bot.equip, [bench, 'hand']);
 	var wait = new CallTask(setTimeout, [null, 200], { location: 0});
 	
@@ -186,20 +220,100 @@ function placeCraftBench(m, loc) {
 }
 
 function center(p) {
+	console.log('center on block');
 	return p.floored().offset(0.5,0,0.5);
 }
 
 function craftPickaxe(m, location) {
+	console.log('Craft sticks and pickaxe');
 	var stickRecipe = bot.recipesAll(280, null, false)[0];
 	var craftSticks = new CallTask(bot.craft, [stickRecipe, 3, null]);
 	
 	var woodPickRecipe = bot.recipesAll(270, null, true)[0];
-	var craftWoodPick = new CallTask(bot.craft, [woodPickRecipe, 4, bot.blockAt(location)]);
+	var craftWoodPick = new CallTask(bot.craft, [woodPickRecipe, 1, bot.blockAt(location)]);
 	console.log(bot.blockAt(location));
 	console.log('this',woodPickRecipe.inShape);
 	
 	craftWoodPick.dependOn(craftSticks);
 	m.addAll(craftWoodPick);
+}
+
+function switchToPick(m) {
+	console.log('switch to pickaxe');
+	var pick = bot.inventory.findInventoryItem(270);
+	var switchToBench = new CallTask(bot.equip, [pick, 'hand']);
+	m.add(switchToBench);
+}
+
+function getStone(m, stone) {
+	
+	var finish = function() {
+		if (this.currentTask.startFunc) { // If just bot.scaffold.to rather than digImmediate
+			m.add(new RunTask(switchToPick));
+		}
+		var stoneInv = bot.inventory.findInventoryItem(4, null) || { count: 0};
+		if (stoneInv.count < 9 + 4 - 1) { // 9 for tools, 4 to scaffold just in case, -1 because it will end before it collects the last stone
+			stone.splice(0, 1);
+			
+			var sides = [vec3(1, 0, 0), vec3(-1, 0, 0), vec3(0, 0, 1), vec3(0, 0, -1)];
+			var found = false;
+			for (var y = 0; y < 2; y++) {
+				for (var s = 0; s < sides.length; s++) {
+					var location = bot.entity.position.clone().floor();
+					location.add(sides[s]);
+					location.add(vec3(0, y, 0));
+					if (bot.blockAt(location).name == 'stone') {
+						found = true;
+						console.log('Location',location);
+						digImmediate.reset([bot.blockAt(location)]);
+						m.add(digImmediate);
+						break;
+					}
+				}
+				if (found) break;
+			}
+			
+			if (!found) {
+				digStone.reset([stone[0].position]);
+				m.add(digStone);
+			}
+		} else console.log('collected all stone');
+	}
+	
+	var start = function() {
+		if (bot.blockAt(stone[0].position).name != 'stone') {
+			stone.splice(0, 1);
+			m.add(digStone);
+		}
+	}
+	
+	var digStone = new CallTask(bot.scaffold.to, [stone[0].position], { complete: finish, start: start });
+	
+	var digImmediate = new CallTask(bot.dig, [stone[0].position], { complete: finish });
+	
+	m.add(digStone);
+}
+
+function goBackToBench(m, loc) {
+	m.add(new CallTask(bot.scaffold.to, [loc]));
+}
+
+function craftStoneTools(m, loc) {
+	var bench = bot.blockAt(loc);
+	
+	var stoneSwordRecipe = bot.recipesAll(272, null, true)[0];
+	var craftStoneSword = new CallTask(bot.craft, [stoneSwordRecipe, 1, bench]);
+	
+	var stonePickRecipe = bot.recipesAll(274, null, true)[0];
+	var craftStonePick = new CallTask(bot.craft, [stonePickRecipe, 1, bench]);
+	
+	var stoneAxeRecipe = bot.recipesAll(275, null, true)[0];
+	var craftStoneAxe = new CallTask(bot.craft, [stoneAxeRecipe, 1, bench]);
+	
+	var stoneShovelRecipe = bot.recipesAll(273, null, true)[0];
+	var craftStoneShovel = new CallTask(bot.craft, [stoneShovelRecipe, 1, bench]);
+	
+	m.add(craftStoneSword).add(craftStonePick).add(craftStoneAxe).add(craftStoneShovel);
 }
 
 
